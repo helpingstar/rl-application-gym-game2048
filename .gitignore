@@ -2,7 +2,9 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode
 
 runs/
+videos/
 test.*
+wandb/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
