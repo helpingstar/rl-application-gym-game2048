@@ -5,6 +5,7 @@ runs/
 videos/
 test.*
 wandb/
+vanilla*.py
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
