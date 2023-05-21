@@ -78,10 +78,12 @@ def parse_args():
         help="goal")
     parser.add_argument("--save-model", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to save model into the `runs/{run_name}` folder")
-    parser.add_argument("--load-model", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--load-model", type=str, default="",
         help="whether to load model `runs/{run_name}` folder")
     parser.add_argument("--linear-size", type=int, default=64,
         help="size of linear ")
+    parser.add_argument("--cnn-channel", type=int, default=32,
+        help="channel of cnn ")
     parser.add_argument("--memo", type=str, default="CNN 64",
         help="memo")
     
@@ -121,13 +123,13 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, linear_size):
+    def __init__(self, envs, linear_size, cnn_channel):
         super().__init__()
         self.network = nn.Sequential(
-            layer_init(nn.Conv2d(1, 8, 3)),
+            layer_init(nn.Conv2d(1, cnn_channel, 3)),
             nn.ReLU(),
             nn.Flatten(),
-            layer_init(nn.Linear(8 * 2 * 2, linear_size)),
+            layer_init(nn.Linear(cnn_channel * 2 * 2, linear_size)),
             nn.ReLU(),
         )
         self.actor = layer_init(nn.Linear(linear_size, envs.single_action_space.n), std=0.01)
@@ -180,7 +182,11 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    agent = Agent(envs, args.linear_size).to(device)
+    agent = Agent(envs, args.linear_size, args.cnn_channel).to(device)
+
+    if args.load_model:
+        agent.load_state_dict(torch.load(f'runs/{args.load_model}'))
+
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup

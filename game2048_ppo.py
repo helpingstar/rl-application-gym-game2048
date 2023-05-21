@@ -78,7 +78,7 @@ def parse_args():
         help="goal")
     parser.add_argument("--save-model", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to save model into the `runs/{run_name}` folder")
-    parser.add_argument("--load-model", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--load-model", type=str, default="",
         help="whether to load model `runs/{run_name}` folder")
     parser.add_argument("--linear-size", type=int, default=128,
         help="size of linear ")
@@ -186,6 +186,10 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
     agent = Agent(envs, args.linear_size).to(device)
+
+    if args.load_model:
+        agent.load_state_dict(torch.load(f'runs/{args.load_model}'))
+
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
