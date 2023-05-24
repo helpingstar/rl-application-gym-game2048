@@ -102,11 +102,8 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         else:
             env = gym.make(env_id, goal=args.goal)
         #### Add Custom Wrappers ###
-        # env = TimeLimit(env, max_episode_steps=3000)
-        # env = RewardConverter(env, goal=6, fail=-5, other=-0.0001)
-
-        env = RewardByScore(env)
-        env = TransformReward(env, lambda r: r * 0.1)
+        env = RewardByScore(env, log=False)
+        env = TransformReward(env, lambda r: r * 0.01)
         env = Normalize2048(env)
         #############################
         env = gym.wrappers.RecordEpisodeStatistics(env)
