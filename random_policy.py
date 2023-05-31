@@ -24,10 +24,13 @@ def parse_args():
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
 
+    parser.add_argument("--colab", type=str, default="",
+        help="the wandb's project name")
+
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="gym_game2048/Game2048-v0",
         help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=500000000,
+    parser.add_argument("--total-timesteps", type=int, default=100000000,
         help="total timesteps of the experiments")
     parser.add_argument("--num-envs", type=int, default=1,
         help="the number of parallel game environments")
@@ -72,7 +75,11 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
+
+    if args.colab:
+        writer = SummaryWriter(f"/content/drive/MyDrive/RL/{args.colab}/{run_name}")
+    else:
+        writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),

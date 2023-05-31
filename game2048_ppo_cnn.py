@@ -7,8 +7,8 @@ from distutils.util import strtobool
 from tqdm import tqdm
 
 import gym_game2048
-from gym_game2048.wrappers import PreprocessForTensor, Normalize2048, RewardConverter, RewardByScore
-from gymnasium.wrappers import FlattenObservation, TimeLimit, TransformReward
+from gym_game2048.wrappers import Normalize2048, RewardByScore, TerminateIllegalWrapper
+from gymnasium.wrappers import TransformReward
 import gymnasium as gym
 import numpy as np
 import torch
@@ -98,13 +98,14 @@ def make_env(env_id, seed, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", goal=args.goal)
+            env = TerminateIllegalWrapper(env, -20)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % 500 == 0), disable_logger=True)
         else:
             env = gym.make(env_id, goal=args.goal)
+            env = TerminateIllegalWrapper(env, -20)
         #### Add Custom Wrappers ###
         env = RewardByScore(env, log=False, goal_bonus=20)
         env = TransformReward(env, lambda r: r * 0.01)
-        env = TransformReward(env, lambda r: r - 0.001)
         env = Normalize2048(env)
         #############################
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -336,7 +337,7 @@ if __name__ == "__main__":
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
         if args.save_model:
-            if update % 20000 == 0:
+            if update % 20000 == 0 or update == num_updates:
                 model_path = f"runs/{run_name}/cleanrl_{args.exp_name}_{update}.pt"
                 torch.save(agent.state_dict(), model_path)
                 print(f"model saved to {model_path}")
