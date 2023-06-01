@@ -41,7 +41,7 @@ def parse_args():
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="gym_game2048/Game2048-v0",
         help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=500000000,
+    parser.add_argument("--total-timesteps", type=int, default=250000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
@@ -49,7 +49,7 @@ def parse_args():
         help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=128,
         help="the number of steps to run in each environment per policy rollout")
-    parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggle learning rate annealing for policy and value networks")
     parser.add_argument("--gamma", type=float, default=0.99,
         help="the discount factor gamma")
@@ -80,11 +80,11 @@ def parse_args():
         help="whether to save model into the `runs/{run_name}` folder")
     parser.add_argument("--load-model", type=str, default="",
         help="whether to load model `runs/{run_name}` folder")
-    parser.add_argument("--linear-size", type=int, default=64,
+    parser.add_argument("--linear-size", type=int, default=512,
         help="size of linear ")
-    parser.add_argument("--cnn-channel", type=int, default=32,
+    parser.add_argument("--cnn-channel", type=int, default=128,
         help="channel of cnn ")
-    parser.add_argument("--memo", type=str, default="CNN 64",
+    parser.add_argument("--memo", type=str, default="illegal terminate, reward: -5~10",
         help="memo")
     
     args = parser.parse_args()
@@ -98,14 +98,19 @@ def make_env(env_id, seed, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", goal=args.goal)
-            env = TerminateIllegalWrapper(env, -20)
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % 500 == 0), disable_logger=True)
+            ### Add Custom Wrappers [1] #######
+            env = RewardByScore(env, log=False, goal_bonus=2000)
+            env = TerminateIllegalWrapper(env, -2000)
+            ###################################
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % 1000 == 0), disable_logger=True)
         else:
             env = gym.make(env_id, goal=args.goal)
-            env = TerminateIllegalWrapper(env, -20)
-        #### Add Custom Wrappers ###
-        env = RewardByScore(env, log=False, goal_bonus=20)
-        env = TransformReward(env, lambda r: r * 0.01)
+            ### Add Custom Wrappers [1] #######
+            env = RewardByScore(env, log=False, goal_bonus=2000)
+            env = TerminateIllegalWrapper(env, -2000)
+            ###################################
+        ### Add Custom Wrappers [2] #######
+        env = TransformReward(env, lambda r: r * 0.0025)
         env = Normalize2048(env)
         #############################
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -337,7 +342,7 @@ if __name__ == "__main__":
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
         if args.save_model:
-            if update % 20000 == 0 or update == num_updates:
+            if update % 50000 == 0 or update == num_updates:
                 model_path = f"runs/{run_name}/cleanrl_{args.exp_name}_{update}.pt"
                 torch.save(agent.state_dict(), model_path)
                 print(f"model saved to {model_path}")
