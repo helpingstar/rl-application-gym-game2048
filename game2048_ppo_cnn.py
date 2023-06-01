@@ -31,7 +31,7 @@ def parse_args():
         help="if toggled, cuda will be enabled by default")
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=False,
         help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="cleanRL",
+    parser.add_argument("--wandb-project-name", type=str, default="game2048",
         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
@@ -41,7 +41,7 @@ def parse_args():
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="gym_game2048/Game2048-v0",
         help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=250000000,
+    parser.add_argument("--total-timesteps", type=int, default=1000000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
@@ -84,7 +84,7 @@ def parse_args():
         help="size of linear ")
     parser.add_argument("--cnn-channel", type=int, default=128,
         help="channel of cnn ")
-    parser.add_argument("--memo", type=str, default="illegal terminate, reward: -5~10",
+    parser.add_argument("--memo", type=str, default="",
         help="memo")
     
     args = parser.parse_args()
@@ -99,18 +99,19 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", goal=args.goal)
             ### Add Custom Wrappers [1] #######
-            env = RewardByScore(env, log=False, goal_bonus=2000)
-            env = TerminateIllegalWrapper(env, -2000)
+            env = RewardByScore(env, log=False, goal_bonus=0)
+            env = TransformReward(env, lambda r: r * 0.0025)
+            env = TerminateIllegalWrapper(env, -5)
             ###################################
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % 1000 == 0), disable_logger=True)
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % 500 == 0), disable_logger=True)
         else:
             env = gym.make(env_id, goal=args.goal)
             ### Add Custom Wrappers [1] #######
-            env = RewardByScore(env, log=False, goal_bonus=2000)
-            env = TerminateIllegalWrapper(env, -2000)
+            env = RewardByScore(env, log=False, goal_bonus=0)
+            env = TransformReward(env, lambda r: r * 0.0025)
+            env = TerminateIllegalWrapper(env, -5)
             ###################################
         ### Add Custom Wrappers [2] #######
-        env = TransformReward(env, lambda r: r * 0.0025)
         env = Normalize2048(env)
         #############################
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -342,7 +343,7 @@ if __name__ == "__main__":
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
         if args.save_model:
-            if update % 50000 == 0 or update == num_updates:
+            if update % 25000 == 0 or update == num_updates:
                 model_path = f"runs/{run_name}/cleanrl_{args.exp_name}_{update}.pt"
                 torch.save(agent.state_dict(), model_path)
                 print(f"model saved to {model_path}")
