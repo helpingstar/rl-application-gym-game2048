@@ -38,6 +38,15 @@ def parse_args():
     parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to capture videos of the agent performances (check out `videos` folder)")
 
+    # track interval
+    parser.add_argument("--log-charts-interval", type=int, default=1000,
+        help="Record interval for chart")
+    parser.add_argument("--log-losses-interval", type=int, default=10,
+        help="Record interval for losses")
+    parser.add_argument("--record-interval", type=int, default=1000,
+        help="Record interval for RecordVideo")
+
+
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="gym_game2048/Game2048-v0",
         help="the id of the environment")
@@ -73,7 +82,7 @@ def parse_args():
         help="the maximum norm for the gradient clipping")
     parser.add_argument("--target-kl", type=float, default=None,
         help="the target KL divergence threshold")
-    
+
     parser.add_argument("--goal", type=int, default=2048,
         help="goal")
     parser.add_argument("--save-model", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
@@ -84,9 +93,11 @@ def parse_args():
         help="size of linear ")
     parser.add_argument("--cnn-channel", type=int, default=128,
         help="channel of cnn ")
+    parser.add_argument("--illegal_terminate", type=int, default=-5,
+        help="Reward for doing illegal action")
     parser.add_argument("--memo", type=str, default="",
         help="memo")
-    
+
     args = parser.parse_args()
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
@@ -103,7 +114,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
             env = TransformReward(env, lambda r: r * 0.0025)
             env = TerminateIllegalWrapper(env, -5)
             ###################################
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % 500 == 0), disable_logger=True)
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=lambda x: (x % args.record_interval == 0), disable_logger=True)
         else:
             env = gym.make(env_id, goal=args.goal)
             ### Add Custom Wrappers [1] #######
@@ -153,6 +164,9 @@ class Agent(nn.Module):
 
 
 if __name__ == "__main__":
+    charts_count = 0
+    losses_count = 0
+
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
@@ -241,11 +255,16 @@ if __name__ == "__main__":
                 # Skip the envs that are not done
                 if info is None:
                     continue
-                # print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-                writer.add_scalar("charts/score", info["score"], global_step)
-                writer.add_scalar("charts/max_number", info["max"], global_step)
+                if charts_count % args.log_charts_interval == 0:
+                    # print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                    writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                    writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                    writer.add_scalar("charts/score", info["score"], global_step)
+                    writer.add_scalar("charts/max_number", info["max"], global_step)
+                    charts_count = 1
+                else:
+                    charts_count += 1
+
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -330,25 +349,27 @@ if __name__ == "__main__":
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        # print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        if losses_count % args.log_losses_interval == 0:
+            # TRY NOT TO MODIFY: record rewards for plotting purposes
+            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+            writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+            writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+            writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+            writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+            writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+            writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+            writer.add_scalar("losses/explained_variance", explained_var, global_step)
+            # print("SPS:", int(global_step / (time.time() - start_time)))
+            writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+            losses_count = 1
+        else:
+            losses_count += 1
 
         if args.save_model:
-            if update % 25000 == 0 or update == num_updates:
+            if update % (num_updates // 10) == 0 or update == num_updates:
                 model_path = f"runs/{run_name}/cleanrl_{args.exp_name}_{update}.pt"
                 torch.save(agent.state_dict(), model_path)
                 print(f"model saved to {model_path}")
-            
-
 
     envs.close()
     writer.close()
