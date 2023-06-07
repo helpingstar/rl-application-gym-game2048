@@ -47,6 +47,4 @@ The code referenced [**cleanrl**](https://github.com/vwxyzjn/cleanrl)'s code.
 | track               | TRUE       |
 | update_epochs       | 4          |
 | vf_coef             | 0.5        |
-| illegal_terminate   | \-5        |
-| log_charts_interval | 1000       |
-| log_losses_interval | 10         |
+| illegal_terminate   | \-5        
