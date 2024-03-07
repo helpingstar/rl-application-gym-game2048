@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gym_game2048.wrappers import Normalize2048, RewardByScore
+from gym_game2048.wrappers import Normalize2048, RewardByScore, TerminateIllegalWrapper
 from gymnasium.wrappers import TransformReward, DtypeObservation, ReshapeObservation
 from tqdm import tqdm
 import numpy as np
@@ -14,6 +14,7 @@ def make_env(idx, capture_video, run_name):
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
             env = gym.make("gym_game2048/Game2048-v0", None)
+        env = TerminateIllegalWrapper(env, -1)
         env = RewardByScore(env, log=False, goal_bonus=0)
         env = TransformReward(env, lambda r: r / goal)
         env = ReshapeObservation(env, (1, 4, 4))
