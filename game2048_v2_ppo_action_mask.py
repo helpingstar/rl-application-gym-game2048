@@ -14,7 +14,7 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 import gym_game2048
-from gym_game2048.wrappers import Normalize2048, RewardByScore, TerminateIllegalWrapper
+from gym_game2048.wrappers import Normalize2048, RewardConverter, TerminateIllegal
 from gymnasium.wrappers import TransformReward, DtypeObservation, ReshapeObservation
 from tqdm import tqdm
 
@@ -118,9 +118,7 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = gym.make(env_id)
         # reward
-        env = RewardByScore(env, log=False, goal_bonus=0)
-        env = TransformReward(env, lambda r: r / 2048.0)
-        env = TerminateIllegalWrapper(env, -1)
+        env = RewardConverter(env)
         # observation
         env = ReshapeObservation(env, (1, 4, 4))
         env = DtypeObservation(env, np.float32)
