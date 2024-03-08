@@ -41,7 +41,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "gym_game2048/Game2048-v0"
     """the id of the environment"""
-    total_timesteps: int = 200000000
+    total_timesteps: int = 300000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
@@ -86,9 +86,9 @@ class Args:
     """Goal of gmae"""
 
     # track interval
-    log_charts_interval: int = 100
+    log_charts_interval: int = 1000
     """Record interval for chart"""
-    log_losses_interval: int = 1
+    log_losses_interval: int = 20
     """Record interval for losses"""
     record_interval: int = 100
     """Record interval for RecordVideo"""
@@ -96,19 +96,22 @@ class Args:
     # network setting
     linear_size: int = 512
     """size of FCN"""
-    cnn_channel: int = 64
+    cnn_channel: int = 128
     """size of CNN channel"""
 
     load_model: str = ""
     """whether to load model `runs/{run_name}` folder"""
 
     network: str = "cnn"
+    """kind of network"""
+    term_rew: float = -5.0
+    """negative reward on termination"""
 
 
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = gym.make(env_id, goal=args.goal, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(
                 env,
                 f"videos/{run_name}",
@@ -116,10 +119,10 @@ def make_env(env_id, idx, capture_video, run_name):
                 # disable_logger=False,
             )
         else:
-            env = gym.make(env_id)
+            env = gym.make(env_id, goal=args.goal)
         # reward
-        env = RewardConverter(env)
-        env = TerminateIllegal(env, -1)
+        env = RewardConverter(env, div_pos_rew=512, term_rew=args.term_rew)
+        env = TerminateIllegal(env, args.term_rew)
         # observation
         env = ReshapeObservation(env, (1, 4, 4))
         env = DtypeObservation(env, np.float32)
