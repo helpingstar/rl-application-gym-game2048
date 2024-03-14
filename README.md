@@ -1,5 +1,8 @@
 This is the code to solve [**gym-game2048**](https://github.com/helpingstar/gym-game2048), a reinforcement learning environment based on the 2048 game.
 
+Detailed experimental results can be found in the wandb project link below.
+* https://wandb.ai/iamhelpingstar/game2048_v2?nw=nwuseriamhelpingstar
+
 After training, you can modify the `weight_path` in the `monitoring.py` file to record the agent's gameplay.
 
 The parameters for training are inside the `game2048_v2_ppo*.py` file and can be modified as desired.
