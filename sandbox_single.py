@@ -8,7 +8,7 @@ goal = 2**13
 
 
 env = gym.make("gym_game2048/Game2048-v0", render_mode="human")
-env = RewardConverter(env)
+env = RewardConverter(env, term_rew=-5)
 env = TerminateIllegal(env, -5)
 env = ReshapeObservation(env, (1, 4, 4))
 env = DtypeObservation(env, np.float32)
