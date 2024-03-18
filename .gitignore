@@ -6,7 +6,8 @@ videos/
 test.*
 wandb/
 vanilla*.py
-
+poetry.lock
+run.sh
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

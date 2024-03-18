@@ -107,6 +107,9 @@ class Args:
     term_rew: float = -5.0
     """negative reward on termination"""
 
+    action_mask: bool = False
+    """whether to mask action"""
+
 
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
