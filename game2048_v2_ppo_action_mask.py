@@ -237,7 +237,7 @@ if __name__ == "__main__":
 
     agent = Agent(envs).to(device)
     if args.load_model:
-        agent.load_state_dict(torch.load(f"weights/{args.load_model}"))
+        agent.load_state_dict(torch.load(args.load_model))
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
