@@ -106,7 +106,8 @@ class Args:
     """kind of network"""
     term_rew: float = -5.0
     """negative reward on termination"""
-
+    div_pos_rew: int = 2**11
+    """reward divided by this value"""
     action_mask: bool = True
     """whether to mask action"""
 
@@ -124,7 +125,7 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = gym.make(env_id, goal=args.goal)
         # reward
-        env = RewardConverter(env, div_pos_rew=512, term_rew=args.term_rew)
+        env = RewardConverter(env, div_pos_rew=args.div_pos_rew, term_rew=args.term_rew)
         # observation
         env = ReshapeObservation(env, (1, 4, 4))
         env = DtypeObservation(env, np.float32)
@@ -402,7 +403,7 @@ if __name__ == "__main__":
         else:
             losses_count += 1
 
-        if iteration % (args.num_iterations // 5) == 0:
+        if iteration % (args.num_iterations // 10) == 0:
             model_path = f"runs/{run_name}/cleanrl_{args.exp_name}_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
