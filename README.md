@@ -5,7 +5,13 @@ Detailed experimental results can be found in the wandb project link below.
 
 After training, you can modify the `weight_path` in the `monitoring.py` file to record the agent's gameplay.
 
-The parameters for training are inside the `game2048_v2_ppo*.py` file and can be modified as desired.
+The training configuration is managed in `game2048_config.py`, the network definition is in `game2048_network.py`, and the PPO training entrypoint is `game2048_train.py`.
+
+You can start training with:
+
+```bash
+python game2048_train.py
+```
 
 The code referenced
 * https://github.com/vwxyzjn/cleanrl
@@ -19,4 +25,3 @@ The code referenced
 ![max_number](/figure/max_number.png)
 
 ![episodic_return](/figure/episodic_return.png)
-
