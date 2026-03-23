@@ -64,13 +64,19 @@ class Agent(nn.Module):
         self.actor = layer_init(nn.Linear(args.linear_size, action_dim), std=0.01)
         self.critic = layer_init(nn.Linear(args.linear_size, 1), std=1)
 
+    def forward(self, x: torch.Tensor):
+        hidden = self.network(x)
+        policy_logits = self.actor(hidden)
+        value = self.critic(hidden)
+        return policy_logits, value
+
     def get_value(self, x: torch.Tensor) -> torch.Tensor:
-        return self.critic(self.network(x))
+        _, value = self.forward(x)
+        return value
 
     def get_action_and_value(self, x: torch.Tensor, action=None, invalid_action_mask=None):
-        hidden = self.network(x)
-        logits = self.actor(hidden)
-        probs = CategoricalMasked(logits=logits, masks=invalid_action_mask)
+        policy_logits, value = self.forward(x)
+        probs = CategoricalMasked(logits=policy_logits, masks=invalid_action_mask)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+        return action, probs.log_prob(action), probs.entropy(), value

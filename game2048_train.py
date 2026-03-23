@@ -1,5 +1,7 @@
+import json
 import random
 import time
+from pathlib import Path
 
 import gymnasium as gym
 import numpy as np
@@ -39,10 +41,47 @@ def make_env(args: Args, idx: int, run_name: str):
     return thunk
 
 
+def save_checkpoints(
+    agent: Agent,
+    args: Args,
+    run_dir: Path,
+    iteration: int,
+    action_dim: int,
+    input_shape: tuple[int, ...],
+) -> None:
+    train_checkpoint_dir = run_dir / "checkpoints" / "train"
+    infer_checkpoint_dir = run_dir / "checkpoints" / "infer"
+    train_checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    infer_checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    train_model_path = train_checkpoint_dir / f"train_{iteration}.pt"
+    infer_model_path = infer_checkpoint_dir / f"infer_{iteration}.pt"
+    infer_metadata_path = infer_checkpoint_dir / f"infer_{iteration}.json"
+
+    state_dict = agent.state_dict()
+    torch.save(state_dict, train_model_path)
+    torch.save(state_dict, infer_model_path)
+
+    infer_metadata = {
+        "network": args.network,
+        "cnn_channel": int(args.cnn_channel),
+        "linear_size": int(args.linear_size),
+        "action_dim": int(action_dim),
+        "input_shape": [int(dim) for dim in input_shape],
+        "output_names": ["policy_logits", "value"],
+    }
+    infer_metadata_path.write_text(json.dumps(infer_metadata, indent=2), encoding="utf-8")
+
+    print(f"train model saved to {train_model_path}")
+    print(f"infer model saved to {infer_model_path}")
+    print(f"infer metadata saved to {infer_metadata_path}")
+
+
 def train(args: Args) -> None:
     charts_count = 0
     losses_count = 0
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    run_dir = Path("runs") / run_name
 
     if args.track:
         import wandb
@@ -56,7 +95,7 @@ def train(args: Args) -> None:
             save_code=True,
         )
 
-    writer = SummaryWriter(f"runs/{run_name}")
+    writer = SummaryWriter(str(run_dir))
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -97,7 +136,8 @@ def train(args: Args) -> None:
     next_obs, infos = envs.reset(seed=args.seed)
     next_obs = torch.as_tensor(next_obs, device=device, dtype=torch.float32)
     next_done = torch.zeros(args.num_envs, device=device)
-    save_interval = max(1, args.num_iterations // 10)
+    save_interval = max(1, args.num_iterations // 100)
+    infer_input_shape = (1,) + envs.single_observation_space.shape
 
     for iteration in tqdm(range(1, args.num_iterations + 1)):
         if args.anneal_lr:
@@ -238,9 +278,14 @@ def train(args: Args) -> None:
             losses_count += 1
 
         if iteration % save_interval == 0:
-            model_path = f"runs/{run_name}/cleanrl_{args.exp_name}_{iteration}.pt"
-            torch.save(agent.state_dict(), model_path)
-            print(f"model saved to {model_path}")
+            save_checkpoints(
+                agent=agent,
+                args=args,
+                run_dir=run_dir,
+                iteration=iteration,
+                action_dim=envs.single_action_space.n,
+                input_shape=infer_input_shape,
+            )
 
     envs.close()
     writer.close()
