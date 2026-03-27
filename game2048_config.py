@@ -68,8 +68,8 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
-    goal: int = 2**15
-    """Goal of gmae"""
+    goal: int = 2**17
+    """Goal of game"""
 
     # track interval
     log_charts_interval: int = 1000

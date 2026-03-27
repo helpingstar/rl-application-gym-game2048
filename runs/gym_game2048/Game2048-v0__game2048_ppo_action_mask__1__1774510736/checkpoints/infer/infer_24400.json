@@ -1,0 +1,16 @@
+{
+  "network": "cnn",
+  "cnn_channel": 128,
+  "linear_size": 512,
+  "action_dim": 4,
+  "input_shape": [
+    1,
+    1,
+    4,
+    4
+  ],
+  "output_names": [
+    "policy_logits",
+    "value"
+  ]
+}
